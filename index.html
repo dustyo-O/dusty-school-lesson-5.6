@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        .photo {
+            display: inline-block;
+
+            width: 300px;
+            margin: 10px;
+
+            overflow: hidden;
+
+            font-family: Helvetica, Arial, sans-serif;
+
+            border: 1px solid black;
+            border-radius: 10px;
+        }
+
+        .photo__image {
+            height: 200px;
+
+            background-size: cover;
+        }
+
+        .photo__footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            box-sizing: border-box;
+            height: 50px;
+            padding: 10px;
+
+            border-top: 1px solid black;
+        }
+
+        .photo__author {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .photo__author-avatar {
+            border-radius: 100%;
+        }
+
+        .photo__likes {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Шаблонизация</h1>
+    <article class="photo">
+        <div class="photo__image" style="background-image: url('https://images.unsplash.com/photo-1691166210947-fbcae873be37?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wyNTM0MnwwfDF8cmFuZG9tfHx8fHx8fHx8MTY5NDEwNTUxOHw&ixlib=rb-4.0.3&q=80&w=1080');"></div>
+        <footer class="photo__footer">
+            <div class="photo__author">
+                <img class="photo__author-avatar" src="https://images.unsplash.com/profile-1606439660375-f871bf83bf86image?ixlib=rb-4.0.3&crop=faces&fit=crop&w=32&h=32">
+                <span class="photo__author-name">Krzysztof Hepner</span>
+            </div>
+            <div class="photo__likes">
+                <i class="photo__heart fas fa-heart"></i> 344
+            </div>
+        </footer>
+    </article>
+    <section class="gallery"></section>
+    <section class="gallery-browser"></section>
+    <section class="gallery-engine"></section>
+    <script src="https://kit.fontawesome.com/80d0029610.js" crossorigin="anonymous"></script>
+    <script>
+        const gallery = document.querySelector('.gallery');
+        const galleryBrowser = document.querySelector('.gallery-browser');
+        const galleryEngine = document.querySelector('.gallery-engine');
+
+        fetch('/unsplash.json')
+            .then(response => response.json())
+            .then(data => {
+                // string templating
+
+                // let galleryHtml = '';
+                // for (const photoData of data) {
+                //     const photoHtml = stringPhotoTemplate(photoData);
+
+                //     galleryHtml = galleryHtml + photoHtml;
+                // }
+
+                // gallery.innerHTML = galleryHtml;
+
+                // browser templating
+
+                for (const photoData of data) {
+                    const photoNode = browserPhotoTemplate(photoData);
+
+                    galleryBrowser.appendChild(photoNode);
+                }
+
+                galleryEngine.appendChild(browserTemplateEngine(data.map(photoTemplate)))
+            });
+
+        function browserPhotoTemplate(photo) {
+            const photoElem = document.createElement('article');
+            photoElem.classList.add('photo');
+
+            const image = document.createElement('div');
+            image.classList.add('photo__image');
+            image.style.backgroundImage = `url('${photo.urls.regular}')`;
+
+            photoElem.appendChild(image);
+
+            const footer = document.createElement('footer');
+            footer.classList.add('photo__footer');
+
+            photoElem.appendChild(footer);
+
+            const author = document.createElement('div');
+            author.classList.add('photo__author');
+
+            footer.appendChild(author);
+
+            const authorAvatar = document.createElement('img');
+            authorAvatar.classList.add('photo__author-avatar');
+            authorAvatar.src = photo.user.profile_image.small;
+
+            author.appendChild(authorAvatar);
+
+            const authorName = document.createElement('span');
+            authorName.classList.add('photo__author-name');
+            authorName.textContent = photo.user.name;
+
+            author.appendChild(authorName);
+
+            const likes = document.createElement('div');
+            likes.classList.add('photo__likes');
+
+            footer.appendChild(likes);
+
+            const heart = document.createElement('i');
+            heart.classList.add('photo__heart', 'fas', 'fa-heart');
+
+            likes.appendChild(heart);
+
+            const likesCount = document.createTextNode(' ' + photo.likes);
+            likes.appendChild(likesCount);
+
+            return photoElem;
+        }
+
+        function browserTemplateEngine(block) {
+            if ((block === undefined) || (block === null) || (block === false)) {
+                return document.createTextNode('');
+            }
+
+            if ((typeof block === 'string') || (typeof block === 'number') || (block === true)) {
+                return document.createTextNode(block);
+            }
+
+            if (Array.isArray(block)) {
+                const fragment = document.createDocumentFragment();
+
+                for (const item of block) {
+                    const itemElem = browserTemplateEngine(item);
+
+                    fragment.appendChild(itemElem);
+                }
+
+                return fragment;
+            }
+
+            const elem = document.createElement(block.block);
+
+            elem.appendChild(browserTemplateEngine(block.content));
+
+            if (block.cls) {
+                const classes = [].concat(block.cls);
+
+                elem.classList.add(...classes);
+            }
+
+            if (block.attrs) {
+                for (const [key, value] of Object.entries(block.attrs)) {
+                    elem.setAttribute(key, value);
+                }
+            }
+
+            return elem;
+        }
+
+        function photoTemplate(photo) {
+            return {
+                block: 'article',
+                cls: 'photo',
+                content: [
+                    {
+                        block: 'div',
+                        cls: 'photo__image',
+                        attrs: {
+                            style: `background-image: url('${photo.urls.regular}');`,
+                        },
+                    },
+                    {
+                        block: 'footer',
+                        cls: 'photo__footer',
+                        content: [
+                            {
+                                block: 'div',
+                                cls: 'photo__author',
+                                content: [
+                                    {
+                                        block: 'img',
+                                        cls: 'photo__author-avatar',
+                                        attrs: {
+                                            src: photo.user.profile_image.small,
+                                        },
+                                    },
+                                    {
+                                        block: 'span',
+                                        cls: 'photo__author-name',
+                                        content: photo.user.name,
+                                    },
+                                ]
+                            },
+                            {
+                                block: 'div',
+                                cls: 'photo__likes',
+                                content: [
+                                    {
+                                        block: 'i',
+                                        cls: ['photo__heart', 'fas', 'fa-heart'],
+                                    },
+                                    ' ',
+                                    photo.likes,
+                                ]
+                            }
+                        ]
+                    },
+                ]
+            }
+        }
+
+        function stringPhotoTemplate(photo) {
+            return `
+                <article class="photo">
+                    <div class="photo__image" style="background-image: url('${photo.urls.regular}');"></div>
+                    <footer class="photo__footer">
+                        <div class="photo__author">
+                            <img class="photo__author-avatar" src="${photo.user.profile_image.small}">
+                            <span class="photo__author-name">${photo.user.name}</span>
+                        </div>
+                        <div class="photo__likes">
+                            <i class="photo__heart fas fa-heart"></i> ${photo.likes}
+                        </div>
+                    </footer>
+                </article>
+            `;
+        }
+    </script>
+</body>
+</html>
